@@ -1,4 +1,5 @@
 import CF from "cloudflare";
+import { notOr } from "./helpers";
 
 const api = new CF({
   email: process.env.CF_EMAIL,
@@ -29,17 +30,6 @@ export default class Cloudflare {
   async addRecord(domain, { content, name, type, isProxy }) {
     type = type.toUpperCase();
     const zoneId = await this.#domain2ZoneId(domain);
-    const records = await this.getRecords(domain);
-    if (
-      records.find(
-        (r) =>
-          (r.name === `${name}.${domain}` ||
-            (name === "@" && r.name === domain) ||
-            name === r.name) &&
-          r.type === type
-      )
-    )
-      return;
     return api.dnsRecords.add(zoneId, {
       type,
       proxied: isProxy,
@@ -69,10 +59,14 @@ export default class Cloudflare {
     return name_servers;
   }
 
-  async removeRecord(domain, record_name) {
+  async removeRecord(domain, { name, type, content }) {
     const records = await this.getRecords(domain);
+    type = type.toUpperCase();
     const myRecordId = records.find(
-      (r) => r.name === `${record_name}.${domain}`
+      (r) =>
+        notOr(name, r.name === `${name}.${domain}`) &&
+        notOr(type, r.type === type) &&
+        notOr(content, r.content === content)
     )?.id;
     if (!myRecordId) {
       return;
