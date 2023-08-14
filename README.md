@@ -8,5 +8,5 @@ detect server ip and register into cloudflare
 
 ## Start
 ```bash
-$ npm start
+npm start
 ```
