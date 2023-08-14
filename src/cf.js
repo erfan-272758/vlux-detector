@@ -1,5 +1,5 @@
 import CF from "cloudflare";
-import { notOr } from "./helpers";
+import { notOr } from "./helpers.js";
 
 const api = new CF({
   email: process.env.CF_EMAIL,

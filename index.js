@@ -12,10 +12,11 @@ async function main() {
 
   console.log({ ips, expireAt });
 
-  const sub = process.env.CF_DOMAIN ?? "ssh";
+  const domain = process.env.CF_DOMAIN;
+  const sub = process.env.CF_SUBDOMAIN ?? "ssh";
 
-  const cfIps = (await cf.getRecords(process.env.CF_DOMAIN))
-    .filter((d) => d.type === "A" && d.name === sub)
+  const cfIps = (await cf.getRecords(domain))
+    .filter((d) => d.type === "A" && d.name === `${sub}.${domain}`)
     .map((d) => d.content);
 
   const addIps = ips.filter((ip) => !cfIps.includes(ip));
@@ -27,23 +28,23 @@ async function main() {
   await Promise.all(
     addIps.map((ip) =>
       tryCount(
-        () =>
-          cf.addRecord(process.env.CF_DOMAIN, {
+        async () =>
+          await cf.addRecord(domain, {
             content: ip,
             isProxy: false,
             name: sub,
             type: "A",
           }),
-        10
+        1
       )
     )
   );
 
   // rm into cloudflare
   await Promise.all(
-    rmIps.map(
+    rmIps.map((ip) =>
       tryCount(() =>
-        cf.removeRecord(process.env.CF_DOMAIN, {
+        cf.removeRecord(domain, {
           name: sub,
           type: "A",
           content: ip,
