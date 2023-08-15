@@ -61,6 +61,7 @@ export default class Cloudflare {
 
   async removeRecord(domain, { name, type, content }) {
     const records = await this.getRecords(domain);
+
     type = type.toUpperCase();
     const myRecordId = records.find(
       (r) =>
@@ -71,7 +72,6 @@ export default class Cloudflare {
     if (!myRecordId) {
       return;
     }
-
     await api.dnsRecords.del(await this.#domain2ZoneId(domain), myRecordId);
   }
   async removeDomain(domain) {

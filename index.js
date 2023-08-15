@@ -6,7 +6,7 @@ import { tryCount } from "./src/tryCount.js";
 const cf = new Cloudflare();
 
 async function main() {
-  console.log("call");
+  console.log("call at", new Date());
 
   const { ips, expireAt } = await getFluxStatus();
 
@@ -24,36 +24,53 @@ async function main() {
 
   console.log({ addIps, rmIps });
 
-  // add into cloudflare
-  await Promise.all(
-    addIps.map((ip) =>
-      tryCount(
-        async () =>
-          await cf.addRecord(domain, {
-            content: ip,
-            isProxy: false,
-            name: sub,
-            type: "A",
-          }),
-        1
+  try {
+    // add into cloudflare
+    await Promise.all(
+      addIps.map((ip) =>
+        tryCount(
+          async () =>
+            await cf.addRecord(domain, {
+              content: ip,
+              isProxy: false,
+              name: sub,
+              type: "A",
+            }),
+          10
+        )
       )
-    )
-  );
+    );
+    console.log("after add");
+  } catch (err) {
+    console.log("add error", err);
+    throw err;
+  }
 
-  // rm into cloudflare
-  await Promise.all(
-    rmIps.map((ip) =>
-      tryCount(() =>
-        cf.removeRecord(domain, {
-          name: sub,
-          type: "A",
-          content: ip,
-        })
+  try {
+    // rm into cloudflare
+    await Promise.all(
+      rmIps.map((ip) =>
+        tryCount(
+          () =>
+            cf.removeRecord(domain, {
+              name: sub,
+              type: "A",
+              content: ip,
+            }),
+          10
+        )
       )
-    )
-  );
+    );
+    console.log("after remove");
+  } catch (err) {
+    console.log("remove error", err);
+    throw err;
+  }
 
-  setTimeout(main, Math.max(1000, expireAt.getTime() - Date.now() - 1000));
+  setTimeout(
+    main,
+    Math.max(5 * 60 * 1000, expireAt.getTime() - Date.now() + 1000)
+  );
 }
 
 main();
